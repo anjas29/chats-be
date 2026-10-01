@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "/usr/local/Cellar/php/8.5.5/bin/php",
+            "args": [
+                "/Users/anjas/Documents/Projects/Laravel/chats-be/artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}

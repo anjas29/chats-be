@@ -1,0 +1,70 @@
+x-app: &app
+    image: ${APP_IMAGE:-ghcr.io/OWNER/chats-be:latest}
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+        mysql:
+            condition: service_healthy
+        redis:
+            condition: service_healthy
+
+services:
+    app:
+        <<: *app
+        ports:
+            - "8000:8080"
+        environment:
+            AUTORUN_MIGRATIONS: "true"
+
+    queue:
+        <<: *app
+        healthcheck:
+            disable: true
+        command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=90", "--max-time=3600"]
+
+    scheduler:
+        <<: *app
+        healthcheck:
+            disable: true
+        command: ["php", "artisan", "schedule:work"]
+
+    # Put a reverse proxy (Caddy / Nginx / Traefik) in front of this so mobile
+    # clients connect over wss:// and terminate TLS there.
+    reverb:
+        <<: *app
+        healthcheck:
+            disable: true
+        command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+        ports:
+            - "8080:8080"
+
+    mysql:
+        image: mysql:8.4
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_USER: ${DB_USERNAME}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD}
+        volumes:
+            - mysql:/var/lib/mysql
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD}"]
+            interval: 5s
+            timeout: 5s
+            retries: 20
+
+    redis:
+        image: redis:7-alpine
+        restart: unless-stopped
+        volumes:
+            - redis:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 20
+
+volumes:
+    mysql:
+    redis:

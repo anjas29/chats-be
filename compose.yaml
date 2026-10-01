@@ -1,0 +1,106 @@
+x-app: &app
+    build:
+        context: .
+        target: development
+    image: chats-be:dev
+    env_file: .env
+    environment:
+        # Containers publish to the reverb service; mobile clients use REVERB_HOST from .env.
+        REVERB_HOST: reverb
+    volumes:
+        - .:/var/www/html
+    depends_on:
+        mysql:
+            condition: service_healthy
+        redis:
+            condition: service_healthy
+
+services:
+    app:
+        <<: *app
+        ports:
+            - "8000:8080"
+        environment:
+            REVERB_HOST: reverb
+            AUTORUN_MIGRATIONS: "false"
+
+    queue:
+        <<: *app
+        healthcheck:
+            disable: true
+        command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=90"]
+
+    scheduler:
+        <<: *app
+        healthcheck:
+            disable: true
+        command: ["php", "artisan", "schedule:work"]
+
+    reverb:
+        <<: *app
+        healthcheck:
+            disable: true
+        command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+        ports:
+            - "8080:8080"
+
+    mysql:
+        image: mysql:8.4
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE:-chats}
+            MYSQL_USER: ${DB_USERNAME:-chats}
+            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+        ports:
+            - "3306:3306"
+        volumes:
+            - mysql:/var/lib/mysql
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD:-secret}"]
+            interval: 5s
+            timeout: 5s
+            retries: 20
+
+    redis:
+        image: redis:7-alpine
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 20
+
+    minio:
+        image: chainguard/minio
+        command: server /data --console-address ":9001"
+        environment:
+            MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minioadmin}
+            MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+        ports:
+            - "9000:9000"
+            - "9001:9001"
+        volumes:
+            - minio:/data
+
+    minio-init:
+        image: chainguard/minio-client
+        depends_on:
+            - minio
+        restart: on-failure
+        entrypoint: ["mc", "mb", "--ignore-existing", "local/${AWS_BUCKET:-chats}"]
+        environment:
+            MC_HOST_local: http://${AWS_ACCESS_KEY_ID:-minioadmin}:${AWS_SECRET_ACCESS_KEY:-minioadmin}@minio:9000
+
+    mailpit:
+        image: axllent/mailpit
+        ports:
+            - "8025:8025"
+            - "1025:1025"
+
+volumes:
+    mysql:
+    redis:
+    minio:
