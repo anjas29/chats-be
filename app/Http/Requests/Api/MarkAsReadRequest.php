@@ -16,7 +16,7 @@ class MarkAsReadRequest extends FormRequest
             'message_id' => [
                 'required',
                 'integer',
-                Rule::exists('messages', 'id')->where('conversation_id', $this->route('conversation')->id),
+                Rule::exists('messages', 'id')->where('conversation_id', $this->route('conversation')?->id),
             ],
         ];
     }

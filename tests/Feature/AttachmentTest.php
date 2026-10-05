@@ -71,7 +71,7 @@ class AttachmentTest extends TestCase
 
         $this->postJson('/api/v1/attachments', ['file' => UploadedFile::fake()->create('malware.exe', 10, 'application/x-msdownload')])
             ->assertUnprocessable();
-        $this->postJson('/api/v1/attachments', ['file' => UploadedFile::fake()->image('huge.jpg')->size(11 * 1024)])
+        $this->postJson('/api/v1/attachments', ['file' => UploadedFile::fake()->image('huge.jpg')->size(6 * 1024)])
             ->assertUnprocessable();
     }
 

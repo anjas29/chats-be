@@ -19,7 +19,7 @@ class StoreConversationRequest extends FormRequest
                 Rule::requiredIf($this->input('type') === ConversationType::Direct->value),
                 'integer',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_banned', false)),
-                Rule::notIn([$this->user()->id]),
+                Rule::notIn([$this->user()?->id]),
             ],
             'name' => [Rule::requiredIf($this->input('type') === ConversationType::Group->value), 'nullable', 'string', 'max:100'],
             'member_ids' => [Rule::requiredIf($this->input('type') === ConversationType::Group->value), 'array', 'min:1', 'max:255'],

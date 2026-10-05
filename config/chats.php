@@ -16,6 +16,6 @@ return [
 
     'media_url_ttl_minutes' => (int) env('MEDIA_URL_TTL_MINUTES', 60),
 
-    'max_upload_kb' => 10240,
+    'max_upload_kb' => 5120,
 
 ];

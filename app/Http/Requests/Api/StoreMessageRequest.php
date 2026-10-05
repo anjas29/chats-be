@@ -25,7 +25,7 @@ class StoreMessageRequest extends FormRequest
             'reply_to_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('messages', 'id')->where('conversation_id', $this->route('conversation')->id),
+                Rule::exists('messages', 'id')->where('conversation_id', $this->route('conversation')?->id),
             ],
             'client_uuid' => ['nullable', 'uuid'],
         ];
